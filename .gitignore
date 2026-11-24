@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Local secrets & runtime user data (NEVER commit API keys or local DB)
+.env
+.env.*
+!.env.example
+config/settings.json
+config/.key
+data/*.db
+data/*.db-journal
+data/*.json
+
+# PyInstaller build artifacts
+dist/
+build/work/
+build/out/
+*.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+node_modules/
+coverage/
