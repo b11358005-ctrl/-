@@ -56,6 +56,7 @@
    - **Base URL**：維持預設 `https://generativelanguage.googleapis.com/v1beta` 即可。
    - 系統預設全部 5 個 Agent 皆為 `gemini` / `gemini-2.5-flash`，直接點擊 **「測試連線」** 確認顯示連線成功後，按下 **「儲存並加密所有設定」** 即可開始分析。
 3. **常用模型名稱**：
+   - `gemini-3.8-flash`（新世代高速模型，可於下拉選單直接選用）
    - `gemini-2.5-flash`（預設，速度快、推理能力佳、免費額度較寬裕）
    - `gemini-2.5-pro`（高階深度推理，適合指派給 `Future Agent` 與 `Risk Agent`）
    - `gemini-2.0-flash`（輕量高速備選）
@@ -204,7 +205,13 @@ cp .env.example .env
 
 ## 7. 常見問題與排查（FAQ）
 
-1. **出現 `[gemini] 免費版 API 觸發頻率限制 (429 Too Many Requests)`**
+1. **貼上 Google Gemini API Key 後顯示 `403` 錯誤（PERMISSION_DENIED）**
+   - **原因 A（學校／企業帳號受限）**：若您登入 Google AI Studio 的是學校（如 `.edu.tw`）或企業 Google Workspace 帳號，管理員政策常會停用 Gemini Developer API 專案權限。請改用**個人 `@gmail.com` 帳號**前往 [Google AI Studio API Keys](https://aistudio.google.com/apikey) 點選「Create API key」並選擇新建專案（Create API key in new project）。
+   - **原因 B（未啟用 Generative Language API）**：若您是到 Google Cloud Console 手動建立的 Key，需前往「API 和服務 → 啟用 API 和服務」搜尋並啟用 **Generative Language API**。
+   - **原因 C（API Key 設了網站／Referer 限制）**：若在 Google Cloud Console 將 Key 限制為「網站 (HTTP referrers)」，桌面程式從本機直接發送請求沒有網頁 Referer 會被擋下（403）。請將應用程式限制改為「無」，或僅在 API 限制勾選 **Generative Language API**。
+   - **原因 D（剛建立或地區／VPN 限制）**：新建專案約需等待 1~2 分鐘生效；若使用部分區域 VPN 也可能觸發 403。
+
+2. **出現 `[gemini] 免費版 API 觸發頻率限制 (429 Too Many Requests)`**
    - **原因**：Google 免費方案有每分鐘請求上限（RPM），加上本系統一次會呼叫 5 個 Agent（其中兩個平行執行）。
    - **解法**：系統已會自動等待重試最多 3 次；若仍超過限制，請等待 30~60 秒後再點一次分析（先前的股價與新聞已被 SQLite 快取，重跑速度會更快），或將部分 Agent 改指派給 `gemini-2.0-flash` / 本機 Ollama。
 

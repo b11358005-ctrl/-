@@ -148,9 +148,10 @@ class OpenAICompatibleAdapter(BaseLLMAdapter):
             base_url = f"{base_url}/v1"
         endpoint = f"{base_url}/chat/completions"
 
+        api_key = config.api_key.strip().strip('"').strip("'")
         headers: Dict[str, str] = {"Content-Type": "application/json"}
-        if config.api_key:
-            headers["Authorization"] = f"Bearer {config.api_key}"
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
         elif config.provider != "ollama":
             raise LLMGatewayError(f"供應商 [{config.provider}] 尚未設定 API Key，請先至「API 與模型設定」填入。")
 
@@ -223,14 +224,15 @@ class AnthropicAdapter(BaseLLMAdapter):
         config: LLMCallConfig,
         json_mode: bool = False,
     ) -> LLMResponse:
-        if not config.api_key:
+        api_key = config.api_key.strip().strip('"').strip("'")
+        if not api_key:
             raise LLMGatewayError("供應商 [anthropic] 尚未設定 API Key，請先至「API 與模型設定」填入。")
 
         base_url = (config.base_url or DEFAULT_BASE_URLS["anthropic"]).rstrip("/")
         endpoint = f"{base_url}/messages"
         headers = {
             "Content-Type": "application/json",
-            "x-api-key": config.api_key,
+            "x-api-key": api_key,
             "anthropic-version": "2023-06-01",
         }
 
@@ -272,7 +274,8 @@ class GeminiAdapter(BaseLLMAdapter):
         config: LLMCallConfig,
         json_mode: bool = False,
     ) -> LLMResponse:
-        if not config.api_key:
+        api_key = config.api_key.strip().strip('"').strip("'")
+        if not api_key:
             raise LLMGatewayError("供應商 [gemini] 尚未設定 API Key，請先至「API 與模型設定」填入。")
 
         base_url = (config.base_url or DEFAULT_BASE_URLS["gemini"]).rstrip("/")
@@ -281,11 +284,11 @@ class GeminiAdapter(BaseLLMAdapter):
 
         headers = {
             "Content-Type": "application/json",
-            "x-goog-api-key": config.api_key,
+            "x-goog-api-key": api_key,
         }
 
         effective_max_tokens = config.max_tokens
-        if "2.5" in model_id:
+        if any(ver in model_id for ver in ("2.5", "3.", "4.")):
             effective_max_tokens = max(config.max_tokens, 8192)
 
         generation_config: Dict[str, Any] = {
@@ -308,7 +311,26 @@ class GeminiAdapter(BaseLLMAdapter):
                 "[gemini] 免費版 API 觸發頻率限制 (429 Too Many Requests)，已自動重試仍超限。請稍候 30 秒再試，或切換模型。"
             )
         if resp.status_code >= 400:
-            raise LLMGatewayError(f"[gemini] API 回傳錯誤 {resp.status_code}：{resp.text[:500]}")
+            err_detail = resp.text[:600]
+            try:
+                err_json = resp.json()
+                err_msg = (err_json.get("error") or {}).get("message")
+                if err_msg:
+                    err_detail = err_msg
+            except Exception:
+                pass
+
+            if resp.status_code == 403:
+                raise LLMGatewayError(
+                    f"[gemini] API 回傳 403 權限拒絕：{err_detail}\n\n"
+                    "常見原因與解法：\n"
+                    "1. 若是在 Google Cloud Console 建立的 Key，請確認該專案已啟用「Generative Language API」。\n"
+                    "2. 請檢查該 API Key 是否設定了「網站 (HTTP referrers)」限制（桌面程式無 Referer 會被擋，請改為「無限制」或僅限 Generative Language API）。\n"
+                    "3. 若您使用學校 (.edu.tw) 或企業 Workspace 帳號，管理員可能封鎖了 Gemini API，請改用個人 @gmail.com 帳號到 https://aistudio.google.com/apikey 選擇「Create API key in new project」重新建立。\n"
+                    "4. 若所在地區／VPN 受限，或剛啟用 API 尚未生效（需等 1~2 分鐘），請稍候重試。"
+                )
+
+            raise LLMGatewayError(f"[gemini] API 回傳錯誤 {resp.status_code}：{err_detail}")
 
         data = resp.json()
         candidates = data.get("candidates") or []
