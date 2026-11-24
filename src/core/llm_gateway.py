@@ -296,22 +296,30 @@ class GeminiAdapter(BaseLLMAdapter):
             "x-goog-api-key": api_key,
         }
 
+        is_gemma = "gemma" in model_id.lower()
         effective_max_tokens = config.max_tokens
-        if any(ver in model_id for ver in ("2.5", "3.", "4.")):
+        if any(ver in model_id.lower() for ver in ("2.5", "3.", "4.", "gemma-4")):
             effective_max_tokens = max(config.max_tokens, 8192)
 
         generation_config: Dict[str, Any] = {
             "temperature": config.temperature,
             "maxOutputTokens": effective_max_tokens,
         }
-        if json_mode:
+        if json_mode and not is_gemma:
             generation_config["responseMimeType"] = "application/json"
 
-        payload: Dict[str, Any] = {
-            "systemInstruction": {"parts": [{"text": system_prompt}]},
-            "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
-            "generationConfig": generation_config,
-        }
+        if is_gemma:
+            combined_prompt = f"{system_prompt}\n\n---\n\n{user_prompt}" if system_prompt.strip() else user_prompt
+            payload: Dict[str, Any] = {
+                "contents": [{"role": "user", "parts": [{"text": combined_prompt}]}],
+                "generationConfig": generation_config,
+            }
+        else:
+            payload = {
+                "systemInstruction": {"parts": [{"text": system_prompt}]},
+                "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+                "generationConfig": generation_config,
+            }
 
         retries = 3 if config.max_retries is None else config.max_retries
         resp = _post_with_retry(

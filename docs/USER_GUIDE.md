@@ -60,6 +60,7 @@
    - `gemini-2.5-flash`（預設，速度快、推理能力佳、免費額度較寬裕）
    - `gemini-2.5-pro`（高階深度推理，適合指派給 `Future Agent` 與 `Risk Agent`）
    - `gemini-2.0-flash`（輕量高速備選）
+   - `gemma-4-31b-it` / `gemma-4-26b-it`（Google 開放權重 Gemma 4 指令微調模型，系統已自動相容處理 system prompt 與 JSON 解析）
 4. **免費版注意事項**：
    - 免費版有每分鐘請求次數（RPM）限制；本系統已在底層內建 **HTTP 429 指數退避自動重試機制**，若仍遇到頻率超限提示，請稍候約 30 秒再重試，或開啟快取減少重複呼叫。
 

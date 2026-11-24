@@ -16,7 +16,7 @@
     - `deepseek`（DeepSeek API，支援 `deepseek-chat` 與 `deepseek-reasoner`）
     - `ollama`（本地 Ollama OpenAI-compatible 端點）
     - `openai_compatible`（任何自訂 OpenAI 相容端點，如 OpenRouter、Groq、LM Studio）
-  - 預設全部 5 個 Agent 採用 Google Gemini 免費額度友善配置（預設 `gemini-2.5-flash`，並內建 `gemini-3.8-flash` / `gemini-2.5-pro` 等下拉選項與 `max_tokens=8192`），內建 HTTP `429`/`503` 指數退避重試機制，並支援在 UI 一鍵統一切換全部 Agent 或為每個 Agent 獨立混搭不同供應商與模型。
+  - 預設全部 5 個 Agent 採用 Google Gemini 免費額度友善配置（預設 `gemini-2.5-flash`，並內建 `gemini-3.8-flash`、`gemini-2.5-pro`、`gemma-4-31b-it`、`gemma-4-26b-it` 等下拉選項與 `max_tokens=8192`，同時自動相容 Gemma 模型無 `systemInstruction`/`responseMimeType` 限制），內建 HTTP `429`/`503` 指數退避重試機制，並支援在 UI 一鍵統一切換全部 Agent 或為每個 Agent 獨立混搭不同供應商與模型。
 - **本機安全儲存與持久化**：
   - API Keys 使用 `cryptography.fernet` 搭配本機產生的 `config/.key`（權限 `0o600`）加密儲存於 `config/settings.json`（不進版控），並支援 `.env` 預設值讀取。
   - 歷史分析報告、股價快取與抓取的新聞快取儲存於本機 SQLite 資料庫 `data/app_cache.db`，避免重複消耗 API 額度並支援離線回看報告。
