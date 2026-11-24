@@ -56,7 +56,7 @@
    - **Base URL**：維持預設 `https://generativelanguage.googleapis.com/v1beta` 即可。
    - 系統預設全部 5 個 Agent 皆為 `gemini` / `gemini-2.5-flash`，直接點擊 **「測試連線」** 確認顯示連線成功後，按下 **「儲存並加密所有設定」** 即可開始分析。
 3. **常用模型名稱**：
-   - `gemini-3.8-flash`（新世代高速模型，可於下拉選單直接選用）
+   - `gemini-3.8-flash` / `gemini-3.5-flash`（新世代高速模型，可於下拉選單直接選用）
    - `gemini-2.5-flash`（預設，速度快、推理能力佳、免費額度較寬裕）
    - `gemini-2.5-pro`（高階深度推理，適合指派給 `Future Agent` 與 `Risk Agent`）
    - `gemini-2.0-flash`（輕量高速備選）
