@@ -31,6 +31,7 @@ class LLMCallConfig:
     temperature: float = 0.2
     max_tokens: int = 3000
     timeout_seconds: float = 120.0
+    max_retries: Optional[int] = None
 
 
 @dataclass
@@ -181,13 +182,18 @@ class OpenAICompatibleAdapter(BaseLLMAdapter):
         if json_mode and not is_reasoning_model:
             payload["response_format"] = {"type": "json_object"}
 
-        resp = _post_with_retry(endpoint, headers, payload, config.timeout_seconds, config.provider)
+        retries = 3 if config.max_retries is None else config.max_retries
+        resp = _post_with_retry(
+            endpoint, headers, payload, config.timeout_seconds, config.provider, max_retries=retries
+        )
 
         if resp.status_code >= 400:
             # Retry once without response_format if an OpenAI-compatible server doesn't support it
             if resp.status_code == 400 and "response_format" in payload:
                 payload.pop("response_format", None)
-                resp = _post_with_retry(endpoint, headers, payload, config.timeout_seconds, config.provider)
+                resp = _post_with_retry(
+                    endpoint, headers, payload, config.timeout_seconds, config.provider, max_retries=retries
+                )
 
             if resp.status_code >= 400:
                 raise LLMGatewayError(
@@ -244,7 +250,10 @@ class AnthropicAdapter(BaseLLMAdapter):
             "messages": [{"role": "user", "content": user_prompt}],
         }
 
-        resp = _post_with_retry(endpoint, headers, payload, config.timeout_seconds, "anthropic")
+        retries = 3 if config.max_retries is None else config.max_retries
+        resp = _post_with_retry(
+            endpoint, headers, payload, config.timeout_seconds, "anthropic", max_retries=retries
+        )
 
         if resp.status_code >= 400:
             raise LLMGatewayError(f"[anthropic] API 回傳錯誤 {resp.status_code}：{resp.text[:500]}")
@@ -304,7 +313,10 @@ class GeminiAdapter(BaseLLMAdapter):
             "generationConfig": generation_config,
         }
 
-        resp = _post_with_retry(endpoint, headers, payload, config.timeout_seconds, "gemini")
+        retries = 3 if config.max_retries is None else config.max_retries
+        resp = _post_with_retry(
+            endpoint, headers, payload, config.timeout_seconds, "gemini", max_retries=retries
+        )
 
         if resp.status_code == 429:
             raise LLMGatewayError(
@@ -438,8 +450,9 @@ class LLMGateway:
                     api_key=config.api_key,
                     base_url=config.base_url,
                     temperature=0.0,
-                    max_tokens=32,
-                    timeout_seconds=25.0,
+                    max_tokens=64,
+                    timeout_seconds=15.0,
+                    max_retries=0,
                 ),
             )
             return True, f"連線成功 ({config.provider} / {config.model}) -> 回應：{resp.text[:40]}"

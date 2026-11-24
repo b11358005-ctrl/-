@@ -9,7 +9,7 @@ from typing import Dict, Optional
 
 import markdown
 from PySide6.QtCore import QObject, Qt, QThread, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QCloseEvent, QFont
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -390,6 +390,7 @@ class MainWindow(QMainWindow):
         # References to dynamic settings widgets
         self._key_inputs: Dict[str, QLineEdit] = {}
         self._url_inputs: Dict[str, QLineEdit] = {}
+        self._test_buttons: Dict[str, QPushButton] = {}
         self._agent_widgets: Dict[str, Dict[str, object]] = {}
 
         self._build_ui()
@@ -724,6 +725,7 @@ class MainWindow(QMainWindow):
                 test_btn = QPushButton("測試連線")
                 test_btn.setFixedWidth(84)
                 test_btn.clicked.connect(lambda checked=False, p=key_name: self._test_provider_connection(p))
+                self._test_buttons[key_name] = test_btn
                 action_box.addWidget(test_btn)
 
             keys_form.addLayout(action_box, row_idx, 3)
@@ -941,6 +943,9 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "快取已清除", "已清空本機股價與財經新聞快取。")
 
     def _test_provider_connection(self, provider: str) -> None:
+        if self._test_thread is not None and self._test_thread.isRunning():
+            return
+
         resolved = self._collect_settings_from_ui()
         suggestions = SUGGESTED_MODELS.get(provider, [])
         test_model = suggestions[0] if suggestions else "gpt-4o-mini"
@@ -958,12 +963,18 @@ class MainWindow(QMainWindow):
             base_url=resolved.settings.base_urls.get(provider, DEFAULT_BASE_URLS.get(provider, "")),
         )
 
+        for p_name, btn in self._test_buttons.items():
+            btn.setEnabled(False)
+            if p_name == provider:
+                btn.setText("測試中...")
+
         self._test_thread = QThread()
         self._test_worker = ConnectionTestWorker(self.gateway, provider, call_cfg)
         self._test_worker.moveToThread(self._test_thread)
         self._test_thread.started.connect(self._test_worker.run)
-        self._test_worker.completed.connect(self._on_test_completed)
         self._test_worker.completed.connect(self._test_thread.quit)
+        self._test_worker.completed.connect(self._on_test_completed)
+        self._test_thread.finished.connect(self._cleanup_test_thread)
         self._test_thread.start()
 
     def _on_test_completed(self, provider: str, ok: bool, msg: str) -> None:
@@ -971,6 +982,17 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, f"{provider} 連線成功", msg)
         else:
             QMessageBox.warning(self, f"{provider} 連線失敗", msg)
+
+    def _cleanup_test_thread(self) -> None:
+        for btn in self._test_buttons.values():
+            btn.setEnabled(True)
+            btn.setText("測試連線")
+        if self._test_worker is not None:
+            self._test_worker.deleteLater()
+            self._test_worker = None
+        if self._test_thread is not None:
+            self._test_thread.deleteLater()
+            self._test_thread = None
 
     def _set_stage_highlight(self, active_stage: int) -> None:
         for idx, lbl in self._stage_labels.items():
@@ -1015,6 +1037,10 @@ class MainWindow(QMainWindow):
             self._switch_page(1)
             return
 
+        if self._analysis_thread is not None and self._analysis_thread.isRunning():
+            QMessageBox.information(self, "分析進行中", "目前已有分析任務正在執行，請稍候或先點擊「中止」。")
+            return
+
         self.run_btn.setEnabled(False)
         self.cancel_btn.setEnabled(True)
         self.progress_bar.setValue(0)
@@ -1041,8 +1067,32 @@ class MainWindow(QMainWindow):
         self._analysis_worker.finished.connect(self._analysis_thread.quit)
         self._analysis_worker.failed.connect(self._analysis_thread.quit)
         self._analysis_worker.cancelled.connect(self._analysis_thread.quit)
+        self._analysis_thread.finished.connect(self._cleanup_analysis_thread)
 
         self._analysis_thread.start()
+
+    def _cleanup_analysis_thread(self) -> None:
+        if self._analysis_worker is not None:
+            self._analysis_worker.deleteLater()
+            self._analysis_worker = None
+        if self._analysis_thread is not None:
+            self._analysis_thread.deleteLater()
+            self._analysis_thread = None
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        if self._analysis_worker is not None:
+            self._analysis_worker.request_cancel()
+        if self._analysis_thread is not None and self._analysis_thread.isRunning():
+            self._analysis_thread.quit()
+            if not self._analysis_thread.wait(3000):
+                self._analysis_thread.terminate()
+                self._analysis_thread.wait(500)
+        if self._test_thread is not None and self._test_thread.isRunning():
+            self._test_thread.quit()
+            if not self._test_thread.wait(3000):
+                self._test_thread.terminate()
+                self._test_thread.wait(500)
+        super().closeEvent(event)
 
     def _cancel_analysis(self) -> None:
         if self._analysis_worker is not None:
