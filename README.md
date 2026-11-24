@@ -85,9 +85,13 @@ stock-multi-agent-desktop/
 │   │   └── risk_agent.py        # 風控與反方審查 Agent
 │   └── ui/
 │       └── app_window.py        # PySide6 原生桌面 GUI
-└── build/
-    ├── stock_analyst.spec       # PyInstaller 跨平台打包規格檔
-    └── build_desktop.py         # 一鍵打包執行檔腳本
+├── build/
+│   ├── stock_analyst.spec       # PyInstaller 跨平台打包規格檔
+│   ├── build_desktop.py         # 跨平台打包腳本
+│   └── build_windows.bat        # Windows 雙擊一鍵打包 .exe 批次檔
+└── .github/
+    └── workflows/
+        └── build-windows.yml    # GitHub Actions 自動建置 Windows .exe 工作流程
 ```
 
 ---
@@ -126,14 +130,19 @@ python main.py
 
 ## 打包為獨立桌面執行檔（`.exe` / `.app`）
 
-完成測試後，可使用專案內附的打包腳本一鍵生成獨立執行檔（輸出於 `dist/` 目錄）：
+### 方式一：Windows 雙擊一鍵打包（最簡單）
+直接雙擊專案內的 **`build\build_windows.bat`**，腳本會自動安裝依賴並產出 `dist\StockMultiAgent.exe`。
 
+### 方式二：指令打包（Windows / macOS）
 ```bash
 python build/build_desktop.py
 ```
 
 - **Windows**：產出 `dist/StockMultiAgent.exe`
 - **macOS**：產出 `dist/StockMultiAgent.app`
+
+### 方式三：透過 GitHub Actions 雲端自動編譯 `.exe`
+本專案已內建 `.github/workflows/build-windows.yml`。推送至 GitHub 後，可在倉庫的 **Actions → Build Windows Desktop EXE** 直接下載自動建置好的 `StockMultiAgent-Windows-exe` 壓縮檔（免在本機環境打包）。
 
 > 打包後第一次執行時，程式會在執行檔同層自動建立 `config/` 與 `data/` 資料夾（若目錄無寫入權限則自動改存於使用者家目錄 `~/StockMultiAgentDesktop/`）。
 

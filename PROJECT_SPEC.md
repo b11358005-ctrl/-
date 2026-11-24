@@ -77,9 +77,13 @@ stock-multi-agent-desktop/
 │   └── ui/
 │       ├── __init__.py
 │       └── app_window.py        # PySide6 原生桌面 GUI（分析工作台、報告閱讀與匯出、設定頁）
-└── build/
-    ├── stock_analyst.spec       # PyInstaller 跨平台打包規格檔
-    └── build_desktop.py         # 一鍵桌面打包腳本（Windows .exe / macOS .app）
+├── build/
+│   ├── stock_analyst.spec       # PyInstaller 跨平台打包規格檔
+│   ├── build_desktop.py         # 跨平台打包腳本（Windows .exe / macOS .app）
+│   └── build_windows.bat        # Windows 一鍵雙擊打包 .exe 批次檔
+└── .github/
+    └── workflows/
+        └── build-windows.yml    # GitHub Actions 自動建置 Windows .exe
 ```
 
 ## 5. 本機執行與打包指令
@@ -94,6 +98,6 @@ pip install -r requirements.txt
 # 2. 啟動桌面應用程式
 python main.py
 
-# 3. 打包為獨立桌面執行檔
+# 3. 打包為獨立桌面執行檔（或 Windows 直接執行 build\build_windows.bat）
 python build/build_desktop.py
 ```
